@@ -1,3 +1,0 @@
-Reviewed upstream source: av-benchmark f351b9a6fc6abde746d5f8e1d4c47c883319cb41 (MIT), passt_hear21 1ab778984f67cca09dd8bbad11f728a0122cce24 (Apache-2.0, declared in its setup.py).
-Diffusers 0.41.0 adapted sampling portions: Apache-2.0. Full license is included.
-The PaSST repository declares Apache-2.0 but lacks a root LICENSE; the standard full Apache-2.0 text is supplied from the installed Diffusers distribution. Existing upstream notices are preserved. No pretrained weights are redistributed.

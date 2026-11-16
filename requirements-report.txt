@@ -1,4 +1,0 @@
-# Separate from the frozen generation/evaluation environment.
-reportlab==4.4.4
-matplotlib==3.10.7
-pypdf==6.1.1
