@@ -1,0 +1,120 @@
+{
+  "repository": "stabilityai/stable-audio-open-1.0",
+  "revision": "f21265c1e2710b3bd2386596943f0007f55f802e",
+  "completed": true,
+  "files": [
+    {
+      "path": "LICENSE.md",
+      "bytes": 11852,
+      "lfs_sha256": null,
+      "git_blob_id": "1d9ce2ee1067327543544de197291726e4fc57a4",
+      "actual_sha256": "d6f6b1a4dce5c852bd6d7d9482d002baf0ccdb71e662250b73be9eec8764ee8d"
+    },
+    {
+      "path": "README.md",
+      "bytes": 8342,
+      "lfs_sha256": null,
+      "git_blob_id": "3d885b931f93cf475e68acc8ab41473b057ef2a5",
+      "actual_sha256": "11b8faf35291bad6706df53d85b12c6ea3691895d443f70c2321d654517c7527"
+    },
+    {
+      "path": "model_index.json",
+      "bytes": 498,
+      "lfs_sha256": null,
+      "git_blob_id": "a2e08e9778cc18fdc1c039092f5912abd687d3af",
+      "actual_sha256": "80b5bfb4f4ed10f56f27846377f000541d341eed6db17041b820606c548be6a9"
+    },
+    {
+      "path": "projection_model/config.json",
+      "bytes": 181,
+      "lfs_sha256": null,
+      "git_blob_id": "1cbca1a6bfc87ee7ba4b427ae1a6567dbb7578fb",
+      "actual_sha256": "a83ff2e87d709803d7702bdadb705e72b22ced16ad0fd929a8af1d11ed57b2a1"
+    },
+    {
+      "path": "projection_model/diffusion_pytorch_model.safetensors",
+      "bytes": 1586944,
+      "lfs_sha256": "032102e2b0e4b9b9e19c648dc476345157b97906752a7b4b7a0133900f340926",
+      "git_blob_id": "2c679c320f8da20db55fce301eeb7acdbc64ef28",
+      "actual_sha256": "032102e2b0e4b9b9e19c648dc476345157b97906752a7b4b7a0133900f340926"
+    },
+    {
+      "path": "scheduler/scheduler_config.json",
+      "bytes": 411,
+      "lfs_sha256": null,
+      "git_blob_id": "0b2751bbf251c66bcb66f985c7f01dcd0611b0d6",
+      "actual_sha256": "7d476d3ad984693c144169ae7e7fd978cf2cd6bb3b9b224db3ee944d83a5ad41"
+    },
+    {
+      "path": "text_encoder/config.json",
+      "bytes": 1497,
+      "lfs_sha256": null,
+      "git_blob_id": "0db501afad36254770a00fd59e338faa64fd7bbb",
+      "actual_sha256": "491696a2ea20e9f5e78b4f150fab241a42d9d64d75b8031cab5b91d2da62a535"
+    },
+    {
+      "path": "text_encoder/model.safetensors",
+      "bytes": 438525864,
+      "lfs_sha256": "095878c81d21f17d235e1b4aa20e9595289177e2658ef4dcec69fa5aa3b07ca2",
+      "git_blob_id": "a53cb85afb100807e0d2b5416510c8f640bf4576",
+      "actual_sha256": "095878c81d21f17d235e1b4aa20e9595289177e2658ef4dcec69fa5aa3b07ca2"
+    },
+    {
+      "path": "tokenizer/special_tokens_map.json",
+      "bytes": 2201,
+      "lfs_sha256": null,
+      "git_blob_id": "2c19eb6e3b583f52d34b903b5978d3d30b6b7682",
+      "actual_sha256": "5c87151ef0f72a99d1f766a4c418bd2a1f90aaa30a8e22fe5eca9641daebb64f"
+    },
+    {
+      "path": "tokenizer/spiece.model",
+      "bytes": 791656,
+      "lfs_sha256": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86",
+      "git_blob_id": "317a5ccbde45300f5d1d970d4d449af2108b147e",
+      "actual_sha256": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86"
+    },
+    {
+      "path": "tokenizer/tokenizer.json",
+      "bytes": 2422169,
+      "lfs_sha256": null,
+      "git_blob_id": "440e6b89375c688d05cd1d8d4b9d90ee52cdd6a7",
+      "actual_sha256": "71c33c3bf57bf2e19b4f8ac686ad8d182a79f7cd1a4921889437c453420223f1"
+    },
+    {
+      "path": "tokenizer/tokenizer_config.json",
+      "bytes": 20768,
+      "lfs_sha256": null,
+      "git_blob_id": "8186f3399223c5566a5cffd47d01fa26772d5f2d",
+      "actual_sha256": "63c92e838e62d98bf80514739be8eba70707aedf656a1faf113d5d4ae585045c"
+    },
+    {
+      "path": "transformer/config.json",
+      "bytes": 391,
+      "lfs_sha256": null,
+      "git_blob_id": "886f818d47bbf280b5c273288b5f50c1d974bc79",
+      "actual_sha256": "b5dd7f337bdcb51f68d414d619710d9fe5b9d18a3c1056afcb9ae6e020478414"
+    },
+    {
+      "path": "transformer/diffusion_pytorch_model.safetensors",
+      "bytes": 4227806200,
+      "lfs_sha256": "65ae9715febfeb2dc9f33aa506c2bda69fd2ddf8ebc483fb2df090df4ca506fd",
+      "git_blob_id": "a80dd8393ed3fd16450e220459d93426258c4bea",
+      "actual_sha256": "65ae9715febfeb2dc9f33aa506c2bda69fd2ddf8ebc483fb2df090df4ca506fd"
+    },
+    {
+      "path": "vae/config.json",
+      "bytes": 350,
+      "lfs_sha256": null,
+      "git_blob_id": "b8419aca11a4ddd9dd4ce3ea26dd59dd563cb189",
+      "actual_sha256": "858b6cce27aa1b2d1e8d331734d2d9690d9ea1dad2fb1e6bd23ee67a61058ad9"
+    },
+    {
+      "path": "vae/diffusion_pytorch_model.safetensors",
+      "bytes": 624490240,
+      "lfs_sha256": "2131cdb52020b2473707465449d8bdb4f6cca61c93150a947baca02bc58ffd7b",
+      "git_blob_id": "b93a744a45f447a225ff779b9c12e0f4e6ce1c36",
+      "actual_sha256": "2131cdb52020b2473707465449d8bdb4f6cca61c93150a947baca02bc58ffd7b"
+    }
+  ],
+  "total_bytes": 5295669564
+}

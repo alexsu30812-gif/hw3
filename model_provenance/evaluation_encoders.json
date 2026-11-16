@@ -1,0 +1,127 @@
+{
+  "source": "Verified pretrained encoder load records; not submitted music or metric results",
+  "complete": true,
+  "encoders": {
+    "vggish": {
+      "url": "https://github.com/harritaylor/torchvggish/releases/download/v0.1/vggish-10086976.pth",
+      "sha256": "10086976245803799d9194e9a73d9b6c1549c71d1b80106f5cade5608a561f4b",
+      "unused_postprocessor_checkpoint_keys": [],
+      "source_sha256": "0c072b3989a028ebee6941efb3221ed97da7c331554bfa0726d15888d2dd6d0f",
+      "frontend_sha256": "28cc413a5a3f09b2b0bd099612804e9c2fc467bf800c0c156329944f6cb7915b",
+      "device": "cpu",
+      "dtype": "float32",
+      "av_benchmark_commit": "f351b9a6fc6abde746d5f8e1d4c47c883319cb41",
+      "policy": {
+        "mono": "channel mean",
+        "center": "subtract mono mean before resampling",
+        "resample": "torchaudio sinc_interp_hann, lowpass_width6, rolloff.99",
+        "duration": "first 10s",
+        "vggish": "16kHz, no right padding, upstream log-mel and frame encoder",
+        "passt": "32kHz, right zero-pad to 320000 frames as upstream",
+        "source": "decode the actual MP3 files with soundfile float32"
+      },
+      "adapter_sha256": "4a6592a4fdea6737063dd351a2de26bcfc3146f630d1750e4ea364bf6b5ba9bf",
+      "helper_source_sha256": "217e1c650b8537b66086bd8054a98993ea00e3b20f302f79e8645dc85f8c9efe",
+      "weight_transport": {
+        "original_release": {
+          "repository": "harritaylor/torchvggish",
+          "release_tag": "v0.1",
+          "asset_id": 15146902,
+          "filename": "vggish-10086976.pth",
+          "bytes": 288567937,
+          "digest": null,
+          "url": "https://github.com/harritaylor/torchvggish/releases/download/v0.1/vggish-10086976.pth",
+          "filename_sha256_prefix": "10086976"
+        },
+        "transport": {
+          "type": "huggingface_mirror",
+          "repository": "YannQi/COMBO-AVS-checkpoints",
+          "revision": "0cccd93230490a170b26f6d3bc83a88b88a11ac1",
+          "path": "pretrained/vggish-10086976.pth",
+          "bytes": 288567937,
+          "sha256": "10086976245803799d9194e9a73d9b6c1549c71d1b80106f5cade5608a561f4b"
+        },
+        "verification": {
+          "actual_bytes": 288567937,
+          "actual_sha256": "10086976245803799d9194e9a73d9b6c1549c71d1b80106f5cade5608a561f4b",
+          "matches_official_release_size": true,
+          "matches_pinned_mirror_full_sha256": true,
+          "official_full_release_digest_available": false,
+          "official_full_release_digest_independently_verified": false,
+          "official_filename_sha256_prefix": "10086976",
+          "claim_scope": "Pinned mirror bytes and original release size; no independent full official digest is available."
+        },
+        "helper_source_sha256": "217e1c650b8537b66086bd8054a98993ea00e3b20f302f79e8645dc85f8c9efe",
+        "range_downloader_source_sha256": "4c2d0dadfa094c391b29349cbacb051c47bba0863a0af8e38e01ae726eb038f8"
+      },
+      "versions": {
+        "torch": "2.11.0",
+        "torchaudio": "2.11.0",
+        "numpy": "1.26.4",
+        "scipy": "1.17.1",
+        "soundfile": "0.14.0"
+      }
+    },
+    "passt": {
+      "model": "passt_s_swa_p16_128_ap476",
+      "source_commit": "1ab778984f67cca09dd8bbad11f728a0122cce24",
+      "weights_sha256": "302903fa8c4aee817b11dc982da0b29aaf8d11a3e722420476d0a12c9db70c2c",
+      "weight_loading": "upstream factory/filter/strict load; transport returns the preverified local checkpoint",
+      "source_sha256": "a9f2a2ae14e0b30de716de192f8c2bbec02388ab64748a9c601e692f3cbab42a",
+      "frontend_sha256": "a7d17de3f86df473384a590d6b7278cdc049e50332ea68bccc03cc95a100021c",
+      "device": "cpu",
+      "dtype": "float32",
+      "av_benchmark_commit": "f351b9a6fc6abde746d5f8e1d4c47c883319cb41",
+      "policy": {
+        "mono": "channel mean",
+        "center": "subtract mono mean before resampling",
+        "resample": "torchaudio sinc_interp_hann, lowpass_width6, rolloff.99",
+        "duration": "first 10s",
+        "vggish": "16kHz, no right padding, upstream log-mel and frame encoder",
+        "passt": "32kHz, right zero-pad to 320000 frames as upstream",
+        "source": "decode the actual MP3 files with soundfile float32"
+      },
+      "adapter_sha256": "4a6592a4fdea6737063dd351a2de26bcfc3146f630d1750e4ea364bf6b5ba9bf",
+      "helper_source_sha256": "217e1c650b8537b66086bd8054a98993ea00e3b20f302f79e8645dc85f8c9efe",
+      "weight_transport": {
+        "original_release": {
+          "repository": "kkoutini/PaSST",
+          "release_tag": "v0.0.1-audioset",
+          "asset_id": 47268195,
+          "filename": "passt-s-f128-p16-s10-ap.476-swa.pt",
+          "bytes": 344665734,
+          "digest": null,
+          "url": "https://github.com/kkoutini/PaSST/releases/download/v0.0.1-audioset/passt-s-f128-p16-s10-ap.476-swa.pt",
+          "filename_sha256_prefix": null
+        },
+        "transport": {
+          "type": "huggingface_mirror",
+          "repository": "OpenMOSS-Team/OmniVAE",
+          "revision": "6bb9ab6dedad19051600c832c441d6cb53661aa0",
+          "path": "eval/models/t2av/torch_cache/hub/checkpoints/passt-s-f128-p16-s10-ap.476-swa.pt",
+          "bytes": 344665734,
+          "sha256": "302903fa8c4aee817b11dc982da0b29aaf8d11a3e722420476d0a12c9db70c2c"
+        },
+        "verification": {
+          "actual_bytes": 344665734,
+          "actual_sha256": "302903fa8c4aee817b11dc982da0b29aaf8d11a3e722420476d0a12c9db70c2c",
+          "matches_official_release_size": true,
+          "matches_pinned_mirror_full_sha256": true,
+          "official_full_release_digest_available": false,
+          "official_full_release_digest_independently_verified": false,
+          "official_filename_sha256_prefix": null,
+          "claim_scope": "Pinned mirror bytes and original release size; no independent full official digest is available."
+        },
+        "helper_source_sha256": "217e1c650b8537b66086bd8054a98993ea00e3b20f302f79e8645dc85f8c9efe",
+        "range_downloader_source_sha256": "4c2d0dadfa094c391b29349cbacb051c47bba0863a0af8e38e01ae726eb038f8"
+      },
+      "versions": {
+        "torch": "2.11.0",
+        "torchaudio": "2.11.0",
+        "numpy": "1.26.4",
+        "scipy": "1.17.1",
+        "soundfile": "0.14.0"
+      }
+    }
+  }
+}

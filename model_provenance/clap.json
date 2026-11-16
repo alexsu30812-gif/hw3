@@ -1,0 +1,8 @@
+{
+  "repository": "lukewys/laion_clap",
+  "revision": "b3708341862f581175dba5c356a4ebf74a9b6651",
+  "filename": "music_audioset_epoch_15_esc_90.14.pt",
+  "sha256": "fae3e9c087f2909c28a09dc31c8dfcdacbc42ba44c70e972b58c1bd1caf6dedd",
+  "architecture": "HTSAT-base",
+  "enable_fusion": false
+}
