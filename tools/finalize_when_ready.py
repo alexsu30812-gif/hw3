@@ -21,6 +21,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import shlex
 import ssl
 import subprocess
 import sys
@@ -143,6 +144,8 @@ class Recorder:
         environment = dict(os.environ)
         environment.update(GIT_TERMINAL_PROMPT='0', GIT_TRACE='0', GIT_CURL_VERBOSE='0',
                            GIT_TRACE_CURL='0', LC_ALL='C')
+        for key in ('GIT_CURL_VERBOSE', 'GIT_TRACE_CURL', 'GIT_TRACE_CURL_NO_DATA'):
+            environment.pop(key, None)
         try:
             result = subprocess.run([str(p) for p in command], cwd=cwd, env=environment,
                                     text=True, capture_output=True, timeout=timeout)
@@ -172,6 +175,21 @@ def destination(path):
     check(value.get('repository') == REPOSITORY and value.get('report_url') == PUBLIC_URL,
           'The destination must be the HW3 repository explicitly provided by the user')
     return value
+
+
+def configure_task_git_auth(recorder, clone):
+    """Use the user's browser-authorized GCM account only in our task clone."""
+    config = ROOT / 'analysis/git_auth_config.json'
+    if not config.is_file():
+        return
+    saved = read(config)
+    helper = '/Applications/GitHub Desktop.app/Contents/Resources/app/git/libexec/git-core/git-credential-manager'
+    check(saved == {'provider': 'git_credential_manager', 'helper': helper, 'username': 'alexsu30812-gif'}
+          and Path(helper).is_file(), 'Unexpected task Git authentication configuration')
+    recorder.command('task_auth_reset', ['git', '-C', clone, 'config', '--local', '--replace-all', 'credential.helper', ''])
+    recorder.command('task_auth_helper', ['git', '-C', clone, 'config', '--local', '--add',
+                                        'credential.helper', '!' + shlex.quote(helper)])
+    recorder.command('task_auth_account', ['git', '-C', clone, 'config', '--local', 'credential.username', saved['username']])
 
 
 def wait_for_pipeline(args, recorder):
@@ -560,6 +578,7 @@ def publish(args, recorder, source):
             check(not head, 'Existing isolated clone already has an unrecorded commit; preserve it')
     else:
         recorder.command('isolated_clone', ['git', '-c', 'protocol.file.allow=never', 'clone', '--', REPOSITORY, clone], timeout=300)
+    configure_task_git_auth(recorder, clone)
     origin = recorder.command('isolated_clone_origin', ['git', '-C', clone, 'remote', 'get-url', 'origin']).strip()
     push_origin = recorder.command('isolated_clone_push_origin', ['git', '-C', clone, 'remote', 'get-url', '--push', 'origin']).strip()
     check(origin == REPOSITORY and push_origin == REPOSITORY, 'Isolated clone has a different fetch/push destination')

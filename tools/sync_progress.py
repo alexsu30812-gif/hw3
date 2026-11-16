@@ -122,6 +122,7 @@ def publish(recorder, public, snapshot):
     clone = f.local(ROOT / 'github_progress')
     if not clone.exists():
         recorder.command('progress_clone', ['git', '-c', 'protocol.file.allow=never', 'clone', '--', f.REPOSITORY, clone])
+    f.configure_task_git_auth(recorder, clone)
     for flag in ([], ['--push']):
         origin = recorder.command('progress_origin' + ('_push' if flag else ''),
             ['git', '-C', clone, 'remote', 'get-url', *flag, 'origin']).strip()
@@ -168,6 +169,11 @@ def publish(recorder, public, snapshot):
              'generated_clips': snapshot['generated_clips'], 'published_at_utc': f.now(),
              'pipeline_stage_at_snapshot': snapshot['pipeline_stage_at_snapshot'],
              'remote_and_public_snapshot_verified': False}
+    return push_and_verify(recorder, selected, event, clone, snapshot)
+
+
+def push_and_verify(recorder, selected, event, clone, snapshot):
+    commit, files, tree = event['commit'], event['files_sha256'], event['tree']
     recorder.value['pending_publication'] = event
     recorder.status('pushing_progress', uploading_clips=snapshot['generated_clips'])
     recorder.command('progress_push', ['git', '-C', clone, 'push', 'origin', 'HEAD:refs/heads/main'], timeout=600)
@@ -185,6 +191,32 @@ def publish(recorder, public, snapshot):
     recorder.status('progress_publication_verified', pending_publication=None,
                     uploaded_clips=snapshot['generated_clips'], commit=commit)
     return event
+
+
+def resume_pending(recorder, pending):
+    """Retry only a previously checked, still-clean owned commit after auth/network failure."""
+    selected = f.destination(DESTINATION)
+    f.check(pending.get('scope') == f.PROGRESS_SCOPE, 'Pending publication has an unexpected scope')
+    clone = f.local(ROOT / 'github_progress')
+    f.verify_owned_tree(recorder, clone, pending['commit'], pending['files_sha256'], pending['tree'], 'pending_progress')
+    origin = recorder.command('pending_origin', ['git', '-C', clone, 'remote', 'get-url', 'origin']).strip()
+    push_origin = recorder.command('pending_push_origin', ['git', '-C', clone, 'remote', 'get-url', '--push', 'origin']).strip()
+    f.check(origin == f.REPOSITORY and push_origin == f.REPOSITORY, 'Pending clone has a different destination')
+    refs = recorder.command('pending_remote', ['git', 'ls-remote', f.REPOSITORY], timeout=120)
+    refmap = {line.split()[1]: line.split()[0] for line in refs.splitlines() if line.strip()}
+    expected = selected.get('commit')
+    allowed = {pending['commit']}
+    if expected is not None:
+        allowed.add(expected)
+    f.check((not refs.strip() and expected is None)
+            or (refmap.get('HEAD') == refmap.get('refs/heads/main')
+                and refmap.get('HEAD') in allowed),
+            'Remote changed beyond the pending owned publication')
+    f.configure_task_git_auth(recorder, clone)
+    snapshot = f.read(clone / 'PROGRESS_SNAPSHOT.json')
+    f.check(snapshot.get('status') == 'WORK_IN_PROGRESS_NOT_FOR_SUBMISSION'
+            and snapshot.get('generated_clips') == pending['generated_clips'], 'Pending snapshot differs')
+    return push_and_verify(recorder, selected, pending, clone, snapshot)
 
 
 def main():
@@ -216,11 +248,15 @@ def main():
                     else:
                         if f.destination(DESTINATION).get('publishing_completed') is True:
                             return
+                        saved = f.read(STATE) if STATE.is_file() else {}
                         recorder = f.Recorder(SimpleNamespace(state=STATE, baseline_only=True, publish_github=True))
                         recorder.value['scope'] = f.PROGRESS_SCOPE
                         try:
-                            public, snapshot = prepare(recorder)
-                            publish(recorder, public, snapshot)
+                            if saved.get('pending_publication'):
+                                resume_pending(recorder, saved['pending_publication'])
+                            else:
+                                public, snapshot = prepare(recorder)
+                                publish(recorder, public, snapshot)
                         except Exception as error:
                             recorder.status('progress_sync_stopped', error=f.redact(error))
                             raise
