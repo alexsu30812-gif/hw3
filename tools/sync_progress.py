@@ -181,7 +181,8 @@ def push_and_verify(recorder, selected, event, clone, snapshot):
     verify_names = ['README.md', 'PROGRESS_SNAPSHOT.json']
     if snapshot['completed_audio_ids']:
         verify_names.append('results/baseline/generated_samples/' + snapshot['completed_audio_ids'][-1] + '.mp3')
-    f.verify_raw_public(commit, {name: {'sha256': files[name], 'bytes': (clone / name).stat().st_size} for name in verify_names})
+    f.verify_raw_public(commit, {name: {'sha256': files[name], 'bytes': (clone / name).stat().st_size}
+                               for name in verify_names}, max_attempts=1, timeout=15)
     f.check(f.destination(DESTINATION) == selected, 'Destination changed during progress publication')
     event['remote_and_public_snapshot_verified'] = True
     selected.update(publication_scope=f.PROGRESS_SCOPE, commit=commit, publication_tree=tree,
@@ -227,8 +228,11 @@ def main():
         fcntl.flock(singleton, fcntl.LOCK_EX | fcntl.LOCK_NB)
         while True:
             selected = f.destination(DESTINATION)
-            if selected.get('publishing_completed') is True:
-                print('Formal publication has taken over; progress sync finished.', flush=True)
+            queue_path = ROOT / 'analysis/formal_publication_queue.json'
+            queue = f.read(queue_path) if queue_path.is_file() else {}
+            if (selected.get('publication_scope') == f.FULL_SCOPE and selected.get('publishing_completed') is True
+                    and (not queue or queue.get('status') == 'published_and_verified')):
+                print('Full formal publication verified; cloud worker finished.', flush=True)
                 return
             previous = selected.get('progress_publication', {})
             manifest = f.read(ROOT / 'results/baseline/manifest.json')
@@ -237,7 +241,13 @@ def main():
             previous_count = previous.get('generated_clips', -5)
             elapsed = (datetime.now(timezone.utc) - datetime.fromisoformat(previous['published_at_utc'])).total_seconds() if previous else 601
             changed_stage = previous.get('pipeline_stage_at_snapshot') != pipeline.get('current_stage')
-            due = not previous or new_count - previous_count >= 5 or changed_stage or (new_count > previous_count and elapsed >= 600)
+            saved = f.read(STATE) if STATE.is_file() else {}
+            pending_progress = bool(saved.get('pending_publication'))
+            formal_pending = bool(queue and queue.get('status') != 'published_and_verified')
+            progress_due = (not queue and selected.get('publishing_completed') is not True
+                and (not previous or new_count - previous_count >= 5 or changed_stage
+                     or (new_count > previous_count and elapsed >= 600)))
+            due = pending_progress or formal_pending or progress_due
             if due:
                 with (ROOT / 'analysis/finalizer_artifacts.lock').open('a') as shared:
                     try:
@@ -246,20 +256,25 @@ def main():
                         if args.once:
                             raise SystemExit('Formal finalizer is active; no duplicate publication was started')
                     else:
-                        if f.destination(DESTINATION).get('publishing_completed') is True:
-                            return
                         saved = f.read(STATE) if STATE.is_file() else {}
                         recorder = f.Recorder(SimpleNamespace(state=STATE, baseline_only=True, publish_github=True))
                         recorder.value['scope'] = f.PROGRESS_SCOPE
+                        recorder.value['background_cloud_retry'] = True
                         try:
                             if saved.get('pending_publication'):
                                 resume_pending(recorder, saved['pending_publication'])
+                            elif queue_path.is_file():
+                                current_queue = f.read(queue_path)
+                                if current_queue.get('status') != 'published_and_verified':
+                                    result = f.flush_publication_queue(recorder, DESTINATION)
+                                    recorder.status('formal_publication_verified', **result)
                             else:
                                 public, snapshot = prepare(recorder)
                                 publish(recorder, public, snapshot)
                         except Exception as error:
-                            recorder.status('progress_sync_stopped', error=f.redact(error))
-                            raise
+                            recorder.status('cloud_waiting_to_retry', error=f.redact(error))
+                            if args.once:
+                                raise
             if args.once:
                 return
             time.sleep(60)

@@ -72,8 +72,9 @@ def render():
         state = '執行中'
     elif running:
         state = '程序存在，心跳未更新，請檢查'
-    elif full_finalize.get('status') == 'complete_local_and_publication_verified':
-        state = '完整版與公開成果已完成'
+    elif full_finalize.get('status') in {'complete_local_and_publication_verified', 'complete_local_publication_queued'}:
+        state = ('完整版與公開成果已完成' if destination.get('publication_scope') == 'full_with_ablation'
+                 and destination.get('publishing_completed') is True else '本機完整版已完成，雲端等待同步')
     else:
         state = '程序未在執行，請檢查狀態'
     cool = ROOT / 'deliverables/cool_ready'

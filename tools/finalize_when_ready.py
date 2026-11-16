@@ -19,6 +19,7 @@ import json
 import math
 import os
 from pathlib import Path
+from types import SimpleNamespace
 import re
 import shutil
 import shlex
@@ -140,10 +141,14 @@ class Recorder:
             raise
 
     def command(self, name, command, timeout=900, okay=(0,), cwd=ROOT):
+        if self.value.get('background_cloud_retry') and str(command[0]) == 'git':
+            timeout = min(timeout, 120)
         log = self.directory / (name + '.log')
         environment = dict(os.environ)
         environment.update(GIT_TERMINAL_PROMPT='0', GIT_TRACE='0', GIT_CURL_VERBOSE='0',
                            GIT_TRACE_CURL='0', LC_ALL='C')
+        if self.value.get('background_cloud_retry'):
+            environment['GCM_INTERACTIVE'] = 'never'
         for key in ('GIT_CURL_VERBOSE', 'GIT_TRACE_CURL', 'GIT_TRACE_CURL_NO_DATA'):
             environment.pop(key, None)
         try:
@@ -525,16 +530,16 @@ def copy_public_bundle(source, clone, prior_files=None, expected_scope=FULL_SCOP
     return copied
 
 
-def verify_raw_public(commit, files):
+def verify_raw_public(commit, files, max_attempts=8, timeout=60):
     verified = {}
     for name, expected in files.items():
         url = f'https://raw.githubusercontent.com/{SLUG}/{commit}/{name}'
         last = None
-        for attempt in range(8):
+        for attempt in range(max_attempts):
             try:
                 request = Request(url, headers={'User-Agent': 'HW3-local-artifact-finalizer'})
                 hasher, size = hashlib.sha256(), 0
-                with urlopen(request, timeout=60, context=tls_context()) as response:
+                with urlopen(request, timeout=timeout, context=tls_context()) as response:
                     check(response.status == 200, 'Public raw artifact is not HTTP 200')
                     while True:
                         chunk = response.read(1024 * 1024)
@@ -550,7 +555,7 @@ def verify_raw_public(commit, files):
                 break
             except (HTTPError, URLError, TimeoutError, ValueError) as error:
                 last = error
-                if attempt < 7:
+                if attempt < max_attempts - 1:
                     time.sleep(5)
         check(name in verified, 'Public raw verification failed after bounded retries: ' + name + ' (' + redact(last) + ')')
     return verified
@@ -646,7 +651,9 @@ def publish(args, recorder, source):
     check(matched, 'Push returned success, but remote HEAD/main could not both be verified; preserve all artifacts')
     artifacts = {name: {'sha256': combined[name], 'bytes': (clone / name).stat().st_size}
                  for name in (STUDENT + '_report.pdf', STUDENT + '.zip')}
-    public = recorder.step('verify_public_report_and_zip', lambda: verify_raw_public(commit, artifacts))
+    background = recorder.value.get('background_cloud_retry')
+    public = recorder.step('verify_public_report_and_zip', lambda: verify_raw_public(
+        commit, artifacts, max_attempts=1 if background else 8, timeout=15 if background else 60))
     check(destination(args.destination) == selected, 'Destination ownership record changed during publication; preserve all artifacts')
     event = {'scope': scope, 'commit': commit, 'tree': tree, 'files_sha256': combined,
              'published_at_utc': now(), 'report_and_zip_public_sha_verified': True}
@@ -662,6 +669,102 @@ def publish(args, recorder, source):
     atomic_json(args.destination, selected)
     return {'commit': commit, 'scope': scope, 'repository': PUBLIC_URL, 'public_artifacts': public,
             'destination_record_sha256': sha(args.destination)}
+
+
+def enqueue_publication(args, source):
+    """Persist immutable, locally validated artifacts without any network call."""
+    scope = BASELINE_SCOPE if args.baseline_only else FULL_SCOPE
+    manifest_path = local(source / 'BUNDLE_MANIFEST.json', required=True)
+    bundle = read(manifest_path)
+    check(bundle.get('status') == 'FORMAL_VALIDATED_LOCAL_BUNDLE'
+          and bundle.get('scope') == scope and bundle.get('validation', {}).get('validated') is True
+          and bundle['validation'].get('scope') == scope, 'Only validated artifacts can enter the publication queue')
+    validate_formal_report(source / (STUDENT + '_report.pdf'), scope)
+    path = ROOT / 'analysis/formal_publication_queue.json'
+    queue = read(path) if path.is_file() else {'history': []}
+    ready = {'scope': scope, 'source': str(local(source).relative_to(ROOT)),
+             'source_manifest_sha256': sha(manifest_path),
+             'report_sha256': bundle['validation']['report_sha256'], 'ready_at_utc': now()}
+    queue.update(status='pending_publication', latest_ready=ready, updated_at_utc=now())
+    queue.setdefault('history', []).append({'event': 'local_artifacts_ready', **ready})
+    atomic_json(path, queue)
+    return ready
+
+
+def resume_formal_commit(recorder, destination_path, pending):
+    """Finish a checked formal commit after network loss, without rebuilding outputs."""
+    selected = destination(destination_path)
+    if selected.get('commit') == pending['commit'] and selected.get('publishing_completed') is True:
+        return selected
+    check(selected.get('commit') == pending.get('prior_commit'), 'Formal retry destination ownership changed')
+    clone = local(ROOT / 'github_publish')
+    verify_owned_tree(recorder, clone, pending['commit'], pending['files_sha256'], pending['tree'], 'queued_formal')
+    for flag in ([], ['--push']):
+        origin = recorder.command('queued_origin' + ('_push' if flag else ''),
+            ['git', '-C', clone, 'remote', 'get-url', *flag, 'origin']).strip()
+        check(origin == REPOSITORY, 'Queued clone has a different destination')
+    refs = recorder.command('queued_remote', ['git', 'ls-remote', REPOSITORY], timeout=120)
+    refmap = {line.split()[1]: line.split()[0] for line in refs.splitlines() if line.strip()}
+    allowed = {pending['commit']}
+    if pending.get('prior_commit') is not None:
+        allowed.add(pending['prior_commit'])
+    check((not refs.strip() and pending.get('prior_commit') is None)
+          or (refmap.get('HEAD') == refmap.get('refs/heads/main') and refmap.get('HEAD') in allowed),
+          'Remote changed beyond the queued formal publication')
+    configure_task_git_auth(recorder, clone)
+    recorder.command('queued_push', ['git', '-C', clone, 'push', 'origin', 'HEAD:refs/heads/main'], timeout=120)
+    expected_remote(recorder, 'queued_remote_verified', pending['commit'])
+    names = (STUDENT + '_report.pdf', STUDENT + '.zip')
+    verify_raw_public(pending['commit'], {name: {'sha256': pending['files_sha256'][name],
+        'bytes': (clone / name).stat().st_size} for name in names}, max_attempts=1, timeout=15)
+    check(destination(destination_path) == selected, 'Destination changed during queued publication')
+    event = {'scope': pending['scope'], 'commit': pending['commit'], 'tree': pending['tree'],
+             'files_sha256': pending['files_sha256'], 'published_at_utc': now(),
+             'report_and_zip_public_sha_verified': True}
+    if event['scope'] == BASELINE_SCOPE:
+        selected['baseline_publication'] = event
+    selected.setdefault('publication_history', []).append(event)
+    selected.update(publishing_completed=True, publication_scope=event['scope'], commit=event['commit'],
+                    publication_tree=event['tree'], publication_files_sha256=event['files_sha256'],
+                    published_at_utc=event['published_at_utc'], report_and_zip_public_sha_verified=True)
+    atomic_json(destination_path, selected)
+    return selected
+
+
+def flush_publication_queue(recorder, destination_path):
+    """Called by the cloud worker while holding the artifact lock; local work never waits for success."""
+    path = ROOT / 'analysis/formal_publication_queue.json'
+    queue = read(path)
+    try:
+        if queue.get('pending_commit'):
+            resume_formal_commit(recorder, destination_path, queue['pending_commit'])
+            queue['pending_commit'] = None
+            atomic_json(path, queue)
+        ready = queue['latest_ready']
+        source = local(ROOT / ready['source'])
+        check(sha(source / 'BUNDLE_MANIFEST.json') == ready['source_manifest_sha256'], 'Queued source changed after validation')
+        selected = destination(destination_path)
+        already_done = (selected.get('publishing_completed') is True
+            and selected.get('publication_scope') == ready['scope']
+            and selected.get('publication_files_sha256', {}).get(STUDENT + '_report.pdf') == ready['report_sha256'])
+        if not already_done:
+            for key in ('local_commit', 'publication_tree', 'publication_files_sha256', 'publication_scope', 'prior_publication_commit'):
+                recorder.value.pop(key, None)
+            publish(SimpleNamespace(baseline_only=ready['scope'] == BASELINE_SCOPE, destination=destination_path), recorder, source)
+            selected = destination(destination_path)
+        queue.update(status='published_and_verified', updated_at_utc=now(), pending_commit=None,
+                     published_commit=selected['commit'], last_error=None)
+        atomic_json(path, queue)
+        return {'scope': ready['scope'], 'commit': selected['commit'], 'published': True}
+    except Exception as error:
+        if not queue.get('pending_commit') and recorder.value.get('local_commit'):
+            queue['pending_commit'] = {'scope': recorder.value['publication_scope'],
+                'commit': recorder.value['local_commit'], 'tree': recorder.value['publication_tree'],
+                'files_sha256': recorder.value['publication_files_sha256'],
+                'prior_commit': recorder.value.get('prior_publication_commit')}
+        queue.update(status='waiting_to_retry', last_error=redact(error), updated_at_utc=now())
+        atomic_json(path, queue)
+        raise
 
 
 def finalize(args):
@@ -727,9 +830,10 @@ def finalize(args):
                           source.with_suffix('.zip'), source / 'BUNDLE_MANIFEST.json')}
             recorder.status('local_formal_artifacts_complete', published=False)
             if args.publish_github:
-                result = recorder.step('publish_github', lambda: publish(args, recorder, source),
+                result = recorder.step('queue_github_publication', lambda: enqueue_publication(args, source),
                                        inputs=(source / 'BUNDLE_MANIFEST.json', args.destination))
-                recorder.status('complete_local_and_publication_verified', published=True, publication=result,
+                recorder.status('complete_local_publication_queued', published=False, publication_pending=True,
+                                queued_publication=result,
                                 completed_at_utc=now())
             else:
                 recorder.status('complete_local_only_not_published', published=False, completed_at_utc=now())
@@ -768,8 +872,9 @@ def main():
             if args.baseline_only:
                 steps += ['Preserve baseline report/checks/COOL ZIP in immutable deliverables/cool_ready']
             if args.publish_github:
-                steps += ['Check selected repository is public through unauthenticated GitHub API',
-                          'Require empty remote for first publication; a later full update only accepts our recorded verified baseline commit',
+                steps += ['Persist an immutable validated publication queue without requiring network; return to local experiments',
+                          'Background sync worker retries cloud publication and interrupted owned commits after reconnection',
+                          'Require empty remote for first publication; updates only accept our verified progress/baseline commits',
                           'Verify clean isolated clone HEAD/tree/all file hashes, then copy only the authorized whitelist',
                           'Commit normally on main; preserve prior other files, recheck remote, never force-push',
                           'Verify remote HEAD/main and unauthenticated public report/ZIP bytes']

@@ -1,8 +1,8 @@
 {
   "status": "WORK_IN_PROGRESS_NOT_FOR_SUBMISSION",
   "snapshot_only": true,
-  "updated_at_utc": "2026-11-16T05:16:22.220343+00:00",
-  "generated_clips": 75,
+  "updated_at_utc": "2026-11-16T05:25:47.613881+00:00",
+  "generated_clips": 80,
   "required_clips": 100,
   "pipeline_stage_at_snapshot": "generate_baseline",
   "required_evaluation_complete": false,
@@ -83,6 +83,11 @@
     "71",
     "72",
     "73",
-    "74"
+    "74",
+    "75",
+    "76",
+    "77",
+    "78",
+    "79"
   ]
 }
