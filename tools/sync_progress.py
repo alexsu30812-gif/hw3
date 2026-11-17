@@ -76,7 +76,12 @@ def prepare(recorder):
             f.check(record['sha256'] == records[identifier]['mp3']['sha256'], 'Progress MP3 hash differs')
         target = f.local(public / name)
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target)
+        if name == 'results/baseline/manifest.json':
+            # The progress JSON keeps identical parsed records with less whitespace.
+            # Formal bundles retain their original, independently validated bytes.
+            target.write_text(json.dumps(manifest, ensure_ascii=False, separators=(',', ':')) + '\n')
+        else:
+            shutil.copyfile(source, target)
     f.check({p.stem for p in (public / 'results/baseline/generated_samples').glob('*.mp3')} == set(records),
             'Progress snapshot is missing recorded MP3 files')
     pipeline = f.read(ROOT / 'analysis/pipeline_state_v6.json')
@@ -176,6 +181,9 @@ def push_and_verify(recorder, selected, event, clone, snapshot):
     commit, files, tree = event['commit'], event['files_sha256'], event['tree']
     recorder.value['pending_publication'] = event
     recorder.status('pushing_progress', uploading_clips=snapshot['generated_clips'])
+    if recorder.value.get('prepare_only'):
+        recorder.status('progress_prepared_for_transport', prepared_clips=snapshot['generated_clips'])
+        return event
     recorder.command('progress_push', ['git', '-C', clone, 'push', 'origin', 'HEAD:refs/heads/main'], timeout=600)
     f.expected_remote(recorder, 'progress_remote_after_push', commit)
     verify_names = ['README.md', 'PROGRESS_SNAPSHOT.json']
@@ -198,6 +206,10 @@ def resume_pending(recorder, pending):
     """Retry only a previously checked, still-clean owned commit after auth/network failure."""
     selected = f.destination(DESTINATION)
     f.check(pending.get('scope') == f.PROGRESS_SCOPE, 'Pending publication has an unexpected scope')
+    # Keep this durable before any network request. A failed retry must not
+    # discard the owned commit that may already have reached the remote.
+    recorder.value['pending_publication'] = pending
+    recorder.save()
     clone = f.local(ROOT / 'github_progress')
     f.verify_owned_tree(recorder, clone, pending['commit'], pending['files_sha256'], pending['tree'], 'pending_progress')
     origin = recorder.command('pending_origin', ['git', '-C', clone, 'remote', 'get-url', 'origin']).strip()
@@ -223,7 +235,10 @@ def resume_pending(recorder, pending):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--once', action='store_true')
+    parser.add_argument('--prepare-only', action='store_true', help='Prepare an owned commit for alternate transport; requires --once')
     args = parser.parse_args()
+    if args.prepare_only and not args.once:
+        parser.error('--prepare-only requires --once')
     with (ROOT / 'analysis/progress_sync.lock').open('a') as singleton:
         fcntl.flock(singleton, fcntl.LOCK_EX | fcntl.LOCK_NB)
         while True:
@@ -260,6 +275,7 @@ def main():
                         recorder = f.Recorder(SimpleNamespace(state=STATE, baseline_only=True, publish_github=True))
                         recorder.value['scope'] = f.PROGRESS_SCOPE
                         recorder.value['background_cloud_retry'] = True
+                        recorder.value['prepare_only'] = args.prepare_only
                         try:
                             if saved.get('pending_publication'):
                                 resume_pending(recorder, saved['pending_publication'])

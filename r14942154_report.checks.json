@@ -1,0 +1,109 @@
+{
+  "report": "r14942154_report.pdf",
+  "sha256": "29ed206d3f79c18086722d49987491f13111e59b76faea4e4a6487dfba388ef5",
+  "pages": 10,
+  "aspect": "16:9",
+  "report_scope": "full_with_ablation",
+  "ablation_included": true,
+  "draft": false,
+  "formal_result_validation_passed": true,
+  "artifact_url": "https://github.com/alexsu30812-gif/hw3",
+  "artifact_public_access_verified_by_builder": false,
+  "remaining_issues": [],
+  "inputs": {
+    "protocol": {
+      "path": "analysis/experiment_protocol_frozen.json",
+      "sha256": "08c5c723910091e06a9f2865985dacc1f10a829d4b960469c15bdec833511339"
+    },
+    "generation": {
+      "path": "results/baseline/manifest.json",
+      "sha256": "bbbb6ddb43ab9ba308de48e2ff1dd25c8b9eb283f15be35995161f80774f1c80"
+    },
+    "evaluation": {
+      "path": "results/baseline_evaluation.json",
+      "sha256": "ce4bf05da0510e8a8118cb5c8a6ff3633878661f98f26dfa8b47c7b7dcdc98f7"
+    },
+    "retrieval_manifest": {
+      "path": "results/retrieval/retrieval_manifest.json",
+      "sha256": "5843eee4072d5c80e0bf8cfe1c0f4ed9b4c53d46fe81d26974d673dc565d0fd0"
+    },
+    "retrieval": {
+      "path": "results/retrieval/retrieval.json",
+      "sha256": "c71892d43efd852ceba9867326ab20cd596a477707121a8b3b357905d6195a50"
+    },
+    "retrieval_details": {
+      "path": "results/retrieval/topk_and_tokenization.json",
+      "sha256": "643e5b4f1fd25ce0728bdb4a8385fc51ebc4208c84e04e6794b745cfac5a4c10"
+    },
+    "ablation": {
+      "path": "results/ablation/ablation_results.json",
+      "sha256": "baee9e48b41985bb3ebbe47e31a6d7bb6a7a78fb09964564d17f04f2763137f2"
+    },
+    "tradeoff_figure_png": {
+      "path": "figures/combined_tradeoff.png",
+      "sha256": "16ecd12e7d52f6366a17ce4606fac9dddeec366e27b40a188cf7cd361b00a7b1"
+    },
+    "tradeoff_figure_pdf": {
+      "path": "figures/combined_tradeoff.pdf",
+      "sha256": "45a9c35fdcd93c6f47a5855f29f7e6c93ef78e875ff1be8d70a6ccffad4a937f"
+    }
+  },
+  "builder_path": "tools/build_report_analysis.py",
+  "builder_sha256": "fbfc9bc613346a171ffc292e2840c0cbedfcc73caf11dec5786376b5a06b2533",
+  "font_sha256": "876af2cd4854644e7f3e7feb2f688997fdb3343c6df6693611209c9dfb47ccec",
+  "case_selection": "Post-hoc descriptive cases: maximum and minimum combined-minus-baseline CLAP within all 20 fixed IDs. Extremes are not representative; no parameter, seed or submission selection.",
+  "descriptive_analysis": {
+    "policy": "Post-hoc report-only descriptive summaries, not new metrics or test tuning.",
+    "baseline_controls": {
+      "n": 100,
+      "mismatch_not_better_ids": [
+        "0",
+        "20",
+        "32",
+        "38",
+        "50",
+        "54",
+        "75",
+        "78",
+        "82",
+        "98"
+      ],
+      "silence_not_better_ids": [
+        "2",
+        "6",
+        "35",
+        "38",
+        "62",
+        "73",
+        "82"
+      ]
+    },
+    "paired_counts": {
+      "schedule_only": {
+        "n": 20,
+        "clap_up": 10,
+        "clap_down": 10,
+        "both_better": 5,
+        "both_worse": 8,
+        "tradeoff": 7
+      },
+      "rescale_only": {
+        "n": 20,
+        "clap_up": 13,
+        "clap_down": 7,
+        "both_better": 8,
+        "both_worse": 4,
+        "tradeoff": 8
+      },
+      "combined": {
+        "n": 20,
+        "clap_up": 11,
+        "clap_down": 9,
+        "both_better": 6,
+        "both_worse": 6,
+        "tradeoff": 8
+      }
+    }
+  },
+  "public_metadata_note": "Only audit paths normalized to project-relative paths; result hashes, metrics and audio are unchanged."
+}

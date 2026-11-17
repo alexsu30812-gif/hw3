@@ -802,11 +802,15 @@ def finalize(args):
             report_python = ROOT / '.venv_report/bin/python'
             generation_python = ROOT / '.venv/bin/python'
             check(report_python.is_file() and generation_python.is_file(), 'Prepared task-local Python environments are missing')
-            report_command = [report_python, ROOT / 'tools/build_report.py', '--artifact-url', selected['report_url']]
+            # Preserve the frozen baseline builder. The report-only revision
+            # consumes the same completed results and does not alter inference.
+            report_builder = ROOT / ('tools/build_report.py' if args.baseline_only else
+                                     'tools/build_report_analysis.py')
+            report_command = [report_python, report_builder, '--artifact-url', selected['report_url']]
             if args.baseline_only:
                 report_command.append('--baseline-only')
             recorder.step('build_formal_report', lambda: recorder.command('build_formal_report', report_command),
-                inputs=(ROOT / 'tools/build_report.py', args.destination))
+                inputs=(report_builder, args.destination))
             report = ROOT / (STUDENT + '_report.pdf')
             validate_formal_report(report, scope)
             source = local(ROOT / 'deliverables' / (STUDENT + ('_source_BASELINE' if args.baseline_only else '_source')))

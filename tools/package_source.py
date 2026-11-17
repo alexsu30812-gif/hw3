@@ -31,7 +31,7 @@ SOURCE_FILES = ('cfg.py', 'generate.py', 'retrieve.py', 'evaluate.py', 'reproduc
                 'analysis/compare_ablation.py')
 TOOL_FILES = ('check_model_access.py', 'download_clap.py', 'download_ranges.py',
               'prepare_evaluation_models.py',
-              'prepare_sao.py', 'freeze_protocol.py', 'build_report.py',
+              'prepare_sao.py', 'freeze_protocol.py', 'build_report.py', 'build_report_analysis.py',
               'probe_runtime.py', 'check_vggish_mps.py',
               'smoke_evaluator_encoders.py', 'package_source.py',
               'finalize_when_ready.py', 'sync_progress.py', 'hw3_progress.py')
@@ -209,7 +209,9 @@ def validate_artifacts(args, directories):
     for entry in checks.get('inputs', {}).values():
         path = safe_source(Path(entry['path']))
         check(sha(path) == entry['sha256'], 'An input changed after the final report was validated')
-    check(checks.get('builder_sha256') == sha(ROOT / 'tools/build_report.py'), 'Report builder changed after PDF validation')
+    builder = checks.get('builder_path', 'tools/build_report.py')
+    check(builder in {'tools/build_report.py', 'tools/build_report_analysis.py'}, 'Unexpected report builder path')
+    check(checks.get('builder_sha256') == sha(safe_source(ROOT / builder)), 'Report builder changed after PDF validation')
     # The independently verified COOL ZIP is around 24 MiB and is not copied
     # into this source archive. Keep the normal 12 MiB limit for selected files.
     cool = safe_source(args.cool_zip, max_bytes=MAX_TOTAL - 1)
@@ -357,6 +359,13 @@ def package(args):
     if not args.baseline_only:
         for name in ('ablation_results.json', 'ablation_per_caption.csv'):
             add(args.ablation_dir / name, 'results/ablation/' + name)
+        report_checks = read(args.report.with_suffix('.checks.json')) if args.report.with_suffix('.checks.json').is_file() else {}
+        for key in ('tradeoff_figure_png', 'tradeoff_figure_pdf'):
+            entry = report_checks.get('inputs', {}).get(key)
+            if entry:
+                source = Path(entry['path'])
+                check(sha(safe_source(source)) == entry['sha256'], 'Report figure changed after validation')
+                add(source, 'figures/' + source.name)
     if not args.draft:
         expected_clips = 100 if args.baseline_only else 160
         check(sum(n.endswith('.mp3') for n in selected) == expected_clips,
